@@ -1,0 +1,23 @@
+/*
+ * Custom CSS
+ */
+
+:root {
+  --bs-body-bg: var(--bs-gray-100);
+}
+
+.activeTab {
+  display: block!important;
+}
+
+.tab{
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.csNav {
+    position: sticky;
+    top: 0;
+    display:block;
+    z-index: 100;
+}
+

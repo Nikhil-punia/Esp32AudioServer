@@ -1,0 +1,7 @@
+.pio
+.vscode
+.env
+build
+logs
+managed_components
+python/audio_server
