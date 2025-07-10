@@ -1,12 +1,18 @@
 #include "audio_util.h"
 
+
+AudioUtil* AudioUtil::getInstance() {
+    static AudioUtil instance;
+    return &instance;
+}
+
 // Constructor implementation
 AudioUtil::AudioUtil()
     : audio(),
       audio_playing(false),
       audio_stopping(false)
 {
-    next_stream_url[0] = '\0';
+    next_stream_url = "";
     bass_str[0] = '\0';
     mid_str[0] = '\0';
     tr_str[0] = '\0';
@@ -16,7 +22,7 @@ void AudioUtil::setupAudio()
 {
     audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
     audio.setConnectionTimeout(30000, 30000); // Set connection timeout for HTTP and HTTPS
-    audio.setVolume(21); // Set default volume (range 0-21)
+    audio.setVolume(21);                      // Set default volume (range 0-21)
 }
 
 void AudioUtil::handle_music_request(const char *url)
@@ -42,7 +48,7 @@ void AudioUtil::handle_music_request(const char *url)
             audio_playing = false;
             Serial.println("Failed to connect to host.");
         }
-        next_stream_url[0] = '\0';
+        next_stream_url.clear();
     }
 }
 
@@ -69,7 +75,7 @@ void AudioUtil::handle_google_tts(const char *text, const char *lang)
     }
 }
 
-void AudioUtil::handle_local_tts(std::string text, std::string voice_id)
+void AudioUtil::handle_local_tts(std::string text, std::string voice_id,std::string host,int port,std::string path)
 {
     // Access local_tts_host from speech_util.h
 
@@ -81,12 +87,12 @@ void AudioUtil::handle_local_tts(std::string text, std::string voice_id)
         audio.stopSong();
     }
 
-    Serial.printf("Connecting to Local TTS with text: %s and voice_id: %s\n", text.c_str(), voice_id.c_str());
     Serial.print("Connecting to Local TTS ");
-    
-    int slashIndex = speechUtil.local_tts_path.indexOf('/');
-    String endpoint = (slashIndex >= 0) ? speechUtil.local_tts_path.substring(slashIndex + 1) : "";
-    if (audio.connect_local_tts(speechUtil.local_tts_host, speechUtil.local_tts_port, speechUtil.local_tts_path, String(text.c_str()), String(voice_id.c_str()), "", endpoint))
+
+    size_t slashIndex = path.find('/');
+    std::string endpoint = (slashIndex != std::string::npos) ? path.substr(slashIndex + 1) : "";
+
+    if (audio.connect_local_tts(host.c_str(), port, path.c_str(), String(text.c_str()), String(voice_id.c_str()), "", endpoint.c_str()))
     {
         audio_playing = true;
         Serial.println("Successfully connected to Local TTS.");
@@ -97,8 +103,6 @@ void AudioUtil::handle_local_tts(std::string text, std::string voice_id)
         Serial.println("Failed to connect to Local TTS.");
     }
 }
-
-
 
 void AudioUtil::setTone(int b, int m, int t)
 {
@@ -114,7 +118,7 @@ void AudioUtil::loopAudio()
         {
             Serial.println("Audio stopped and ready for new connection.");
             audio_stopping = false;
-            if (next_stream_url.length() > 0)
+            if (!next_stream_url.empty())
             {
                 Serial.printf("Connecting to pending stream: %s\n", next_stream_url.c_str());
                 if (audio.connecttohost(next_stream_url.c_str()))
@@ -191,7 +195,7 @@ void AudioUtil::stopAudio()
 //     req += body;
 
 //     _client = static_cast<WiFiClient*>(&client);
-     
+
 //     AUDIO_INFO("Connecting to local TTS server %s:%d", host.c_str(), port);
 
 //     if (!_client->connect(host.c_str(), port)) {
@@ -200,7 +204,6 @@ void AudioUtil::stopAudio()
 //         return false;
 //     }
 
-    
 //     _client->print(req);
 
 //     m_f_running = true;

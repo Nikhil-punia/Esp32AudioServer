@@ -1,17 +1,20 @@
 #include "server_util.h"
 
-ServerUtil::ServerUtil(SpeechUtil *speechUtilPtr, AudioUtil *audioUtilPtr)
+ServerUtil *ServerUtil::getInstance()
 {
-    this->speechUtil = speechUtilPtr;
-    this->audioUtil = audioUtilPtr;
+    static ServerUtil instance;
+    return &instance;
+}
 
+ServerUtil::ServerUtil()
+{
     websocket_uri = {
         .uri = "/ws",
         .method = HTTP_GET,
         .handler = websocket_handler,
         .user_ctx = this,
         .handle_ws_control_frames = NULL,
-        .supported_subprotocol = NULL };
+        .supported_subprotocol = NULL};
 
     websocket_uri.is_websocket = true;
 
@@ -76,14 +79,12 @@ ServerUtil::ServerUtil(SpeechUtil *speechUtilPtr, AudioUtil *audioUtilPtr)
         .user_ctx = this,
         .handle_ws_control_frames = NULL,
         .supported_subprotocol = NULL};
-
-    
 }
 
-httpd_handle_t ServerUtil::start_webserver(void)
+httpd_handle_t ServerUtil::start_webserver()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.stack_size = 8192 * 2 ;
+    config.stack_size = 8192 * 2;
 
     httpd_handle_t server = NULL;
 
@@ -154,13 +155,13 @@ esp_err_t ServerUtil::root_get_handler(httpd_req_t *req)
             cJSON_AddStringToObject(json_response, "link", link_url);
             has_supported_query = true;
             self->stopAllPreviousTasks(self);
-            (*self->audioUtil).handle_music_request(link_url);
+            AudioUtil::getInstance()->handle_music_request(link_url);
         }
 
         if (httpd_query_key_value(query, "bass", bass_buf, sizeof(bass_buf)) == ESP_OK)
         {
             ESP_LOGI(self->TAG, "Found URL query parameter => bass=%s", bass_buf);
-            (*self->audioUtil).setBassStr(bass_buf);
+            AudioUtil::getInstance()->setBassStr(bass_buf);
             has_supported_query = true;
             cJSON_AddStringToObject(json_response, "bass", bass_buf);
         }
@@ -168,7 +169,7 @@ esp_err_t ServerUtil::root_get_handler(httpd_req_t *req)
         if (httpd_query_key_value(query, "mid", mid_buf, sizeof(mid_buf)) == ESP_OK)
         {
             ESP_LOGI(self->TAG, "Found URL query parameter => mid=%s", mid_buf);
-            (*self->audioUtil).setMidStr(mid_buf);
+            AudioUtil::getInstance()->setMidStr(mid_buf);
             has_supported_query = true;
             cJSON_AddStringToObject(json_response, "mid", mid_buf);
         }
@@ -176,7 +177,7 @@ esp_err_t ServerUtil::root_get_handler(httpd_req_t *req)
         if (httpd_query_key_value(query, "tr", tr_buf, sizeof(tr_buf)) == ESP_OK)
         {
             ESP_LOGI(self->TAG, "Found URL query parameter => tr=%s", tr_buf);
-            (*self->audioUtil).setTrStr(tr_buf);
+            AudioUtil::getInstance()->setTrStr(tr_buf);
             has_supported_query = true;
             cJSON_AddStringToObject(json_response, "tr", tr_buf);
         }
@@ -185,15 +186,15 @@ esp_err_t ServerUtil::root_get_handler(httpd_req_t *req)
         if (httpd_query_key_value(query, "stop", stop_buf, sizeof(stop_buf)) == ESP_OK)
         {
             ESP_LOGI(self->TAG, "Found URL query parameter => stop");
-            (*self->audioUtil).stopAudio();
+            AudioUtil::getInstance()->stopAudio();
             has_supported_query = true;
             cJSON_AddBoolToObject(json_response, "stop", 1); // 1 = true
         }
 
-        self->audioUtil->setTone(
-            atoi((*self->audioUtil).getBassStr().c_str()),
-            atoi((*self->audioUtil).getMidStr().c_str()),
-            atoi((*self->audioUtil).getTrStr().c_str()));
+        AudioUtil::getInstance()->setTone(
+            atoi(AudioUtil::getInstance()->getBassStr().c_str()),
+            atoi(AudioUtil::getInstance()->getMidStr().c_str()),
+            atoi(AudioUtil::getInstance()->getTrStr().c_str()));
 
         if (!has_supported_query)
         {
@@ -268,8 +269,6 @@ esp_err_t ServerUtil::lspeech_post_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    self->largs->speechUtil = self->speechUtil;
-    self->largs->audioUtil = self->audioUtil;
     self->largs->text = std::make_unique<std::string>();
     self->largs->voice_id = std::make_unique<std::string>();
 
@@ -356,8 +355,6 @@ esp_err_t ServerUtil::speech_post_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    self->args->speechUtil = self->speechUtil;
-    self->args->audioUtil = self->audioUtil;
     self->args->text = new std::string();
     self->args->lang = new std::string();
 
@@ -431,9 +428,9 @@ esp_err_t ServerUtil::speech_post_handler(httpd_req_t *req)
 bool ServerUtil::stopAllPreviousTasks(ServerUtil *self)
 {
     // Stop tasks first
-    if (self->speechUtil->speech_task_running())
+    if (SpeechUtil::getInstance()->speech_task_running())
     {
-        self->speechUtil->stop_speech_task();
+        SpeechUtil::getInstance()->stop_speech_task();
         if (self->args != nullptr)
         {
             delete self->args->text;
@@ -442,9 +439,9 @@ bool ServerUtil::stopAllPreviousTasks(ServerUtil *self)
         }
     }
 
-    if (self->speechUtil->speech_ltask_running())
+    if (SpeechUtil::getInstance()->speech_ltask_running())
     {
-        self->speechUtil->stop_lspeech_task();
+        SpeechUtil::getInstance()->stop_lspeech_task();
         if (self->largs != nullptr)
         {
             delete self->largs;
@@ -452,7 +449,7 @@ bool ServerUtil::stopAllPreviousTasks(ServerUtil *self)
         }
     }
 
-    self->audioUtil->stopAudio();
+    AudioUtil::getInstance()->stopAudio();
     return true;
 }
 
@@ -547,35 +544,37 @@ esp_err_t ServerUtil::set_config_handler(httpd_req_t *req)
 
 void ServerUtil::handleValueForConfig(httpd_req_t *req, ServerUtil *self, const char *cfg, const char *query, const char *value)
 {
-            if (strcmp(cfg, "wifi") == 0)
+    if (strcmp(cfg, "wifi") == 0)
+    {
+    }
+    else if (strcmp(cfg, "audio") == 0)
+    {
+    }
+    else if (strcmp(cfg, "speech") == 0)
+    {
+        if (SpeechUtil::getInstance()->handleSingleConfigUpdate(query, value))
+        {
+            cJSON *json_response = cJSON_CreateObject();
+            if (!json_response)
             {
+                ESP_LOGE(self->TAG, "Failed to create JSON response object");
+                httpd_resp_send_500(req);
+                return;
             }
-            else if (strcmp(cfg, "audio") == 0)
-            {
-            }
-            else if (strcmp(cfg, "speech") == 0)
-            {
-                if (self->speechUtil->handleSingleConfigUpdate(query, value))
-                {
-                    cJSON *json_response = cJSON_CreateObject();
-                    if (!json_response)
-                    {
-                        ESP_LOGE(self->TAG, "Failed to create JSON response object");
-                        httpd_resp_send_500(req);
-                        return;
-                    }
-                    cJSON_AddStringToObject(json_response, "message", "Speech config updated successfully");
-                    sendJsonResponse(req, json_response, self);
-                }
-                else
-                {
-                    ESP_LOGE(self->TAG, "Failed to update speech config");
-                    httpd_resp_send_500(req); // Bad Request
-                }
-            }else{
-                ESP_LOGE(self->TAG, "Unknown config type: %s", cfg);
-                httpd_resp_send_500(req); // Bad Request
-            }
+            cJSON_AddStringToObject(json_response, "message", "Speech config updated successfully");
+            sendJsonResponse(req, json_response, self);
+        }
+        else
+        {
+            ESP_LOGE(self->TAG, "Failed to update speech config");
+            httpd_resp_send_500(req); // Bad Request
+        }
+    }
+    else
+    {
+        ESP_LOGE(self->TAG, "Unknown config type: %s", cfg);
+        httpd_resp_send_500(req); // Bad Request
+    }
 }
 
 void ServerUtil::handleQueryForConfig(httpd_req_t *req, ServerUtil *self, const char *query, bool webs)
@@ -646,7 +645,6 @@ void ServerUtil::handleQueryForConfig(httpd_req_t *req, ServerUtil *self, const 
         cJSON_AddNumberToObject(json_response, "psram_size", psram_size);
         size_t free_psram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
         cJSON_AddNumberToObject(json_response, "free_psram", free_psram);
-        
 
         // Get flash size
         esp_flash_t *flash = esp_flash_default_chip;

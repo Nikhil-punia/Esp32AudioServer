@@ -2,7 +2,6 @@
 #include "Audio.h"
 #include <cstring> // instead of <string.h>
 #include <string>
-#include "speech_util.h"
 #include "esp_log.h"
 #include "cJSON.h"
 #include "fs_util.h"
@@ -29,7 +28,8 @@
 class AudioUtil
 {
 public:
-    AudioUtil();
+    static AudioUtil *getInstance(); // Singleton accessor
+
     void stopAudio();
     void setBassStr(const std::string &bass) { bass_str = bass; };
     void setMidStr(const std::string &mid) { mid_str = mid; };
@@ -43,12 +43,15 @@ public:
     void setupAudio();
     void handle_music_request(const char *url);
     void handle_google_tts(const char *text, const char *lang);
-    void handle_local_tts(std::string text, std::string voice_id);
+    void handle_local_tts(std::string text, std::string voice_id,std::string host,int port,std::string path);
     void setTone(int b, int m, int t);
     void loopAudio();
-    
 
 private:
+    AudioUtil();                                      // Private constructor
+    AudioUtil(const AudioUtil &) = delete;            // Prevent copy
+    AudioUtil &operator=(const AudioUtil &) = delete; // Prevent assignment
+
     Audio audio;
     volatile bool audio_playing;
     volatile bool audio_stopping;
@@ -57,5 +60,3 @@ private:
     std::string mid_str;
     std::string tr_str;
 };
-
-extern AudioUtil audioUtil;

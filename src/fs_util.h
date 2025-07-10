@@ -9,11 +9,15 @@
 class FsUtil
 {
 private:
-    const char *TAG = "Fs";
+    static constexpr const char *TAG = "Fs";
+    FsUtil(); // constructor private
+    FsUtil(const FsUtil&) = delete;
+    FsUtil& operator=(const FsUtil&) = delete;
 
 public:
-    FsUtil();
     
+    static FsUtil* getInstance();
+
     const char *root_file_path = "/spiflash/config.json";
     std::string root_obj = "root";
     std::array<std::string, 5> initial_objects = {"wifi", "audio", "speech", "http", "radio"};
@@ -31,4 +35,4 @@ public:
     bool setIntConfigValue(const char *file_path, const char *object_name, const char *property, int val);
 };
 
-extern FsUtil fsUtil;
+#define fsUtil (*FsUtil::getInstance())

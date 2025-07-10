@@ -1,6 +1,12 @@
 #include "speech_util.h"
 
 
+SpeechUtil* SpeechUtil::getInstance() {
+    static SpeechUtil instance;
+    return &instance;
+}
+
+
 void SpeechUtil::speech_synthesis_task(void *param)
 {
     
@@ -35,14 +41,14 @@ void SpeechUtil::speech_synthesis_task(void *param)
         start += chunk_len;
     }
 
-    std::vector<int> speech_chunks = args->self->identifySpeechChunks(*text, len, initial_chunks);
+    std::vector<int> speech_chunks = getInstance()->identifySpeechChunks(*text, len, initial_chunks);
 
     for (int i = 0; i < speech_chunks.size(); ++i)
     {
-        int start_pos = (i == 0) ? 0 : args->self->getEndPosition(speech_chunks, i - 1);
+        int start_pos = (i == 0) ? 0 : getInstance()->getEndPosition(speech_chunks, i - 1);
         std::string chunk = text->substr(start_pos, speech_chunks[i]);
-        args->audioUtil->handle_google_tts(chunk.c_str(), lang->c_str());
-        while (args->audioUtil->getAudio().isRunning())
+        AudioUtil::getInstance()->handle_google_tts(chunk.c_str(), lang->c_str());
+        while (AudioUtil::getInstance()->getAudio().isRunning())
         {
             vTaskDelay(pdMS_TO_TICKS(100));
         }
@@ -83,14 +89,14 @@ void SpeechUtil::lspeech_synthesis_task(void *param)
         start += chunk_len;
     }
 
-    std::vector<int> speech_chunks = args->self->identifySpeechChunks(*text, len, initial_chunks);
+    std::vector<int> speech_chunks = getInstance()->identifySpeechChunks(*text, len, initial_chunks);
 
     for (int i = 0; i < speech_chunks.size(); ++i)
     {
-        int start_pos = (i == 0) ? 0 : args->self->getEndPosition(speech_chunks, i - 1);
+        int start_pos = (i == 0) ? 0 : getInstance()->getEndPosition(speech_chunks, i - 1);
         std::string chunk = text->substr(start_pos, speech_chunks[i]);
-        args->audioUtil->handle_local_tts(chunk, *voice_id);
-        while (args->audioUtil->getAudio().isRunning())
+        AudioUtil::getInstance()->handle_local_tts(chunk, *voice_id,getInstance()->local_tts_host,getInstance()->local_tts_port,getInstance()->local_tts_path);
+        while (AudioUtil::getInstance()->getAudio().isRunning())
         {
             vTaskDelay(pdMS_TO_TICKS(100));
         }
@@ -150,12 +156,12 @@ void SpeechUtil::setupSpeechUtil()
     std::string host = fsUtil.getStringConfigValue(fsUtil.root_file_path, "speech", "local_tts_host");
     if (!host.empty())
     {
-        local_tts_host = host.c_str(); // assign as const char* if local_tts_host is const char*
+        local_tts_host = host; // assign as const char* if local_tts_host is const char*
     }
     else
     {
         Serial.println("No local_tts_host found in config.json, using default.");
-        fsUtil.setStringConfigValue(fsUtil.root_file_path, "speech", "local_tts_host", local_tts_host.c_str());
+        fsUtil.setStringConfigValue(fsUtil.root_file_path, "speech", "local_tts_host", local_tts_host);
     }
 
     int port = fsUtil.getIntConfigValue(fsUtil.root_file_path, "speech", "local_tts_port");
@@ -172,7 +178,7 @@ void SpeechUtil::setupSpeechUtil()
     std::string path = fsUtil.getStringConfigValue(fsUtil.root_file_path, "speech", "local_tts_path");
     if (!path.empty())
     {
-        local_tts_path = path.c_str();
+        local_tts_path = path;
     }
     else
     {
@@ -223,7 +229,7 @@ bool SpeechUtil::stop_lspeech_task()
 
 bool SpeechUtil::updateSpeechHost(const std::string& host)
 {
-    local_tts_host = host.c_str();
+    local_tts_host = host;
     bool result = fsUtil.setStringConfigValue(fsUtil.root_file_path, "speech", "local_tts_host", local_tts_host.c_str());
     Serial.println("SpeechUtil Host updated.");
     return result;
@@ -239,7 +245,7 @@ bool SpeechUtil::updateSpeechPort(int port)
 
 bool SpeechUtil::updateSpeechPath(const std::string& path)
 {
-    local_tts_path = path.c_str();
+    local_tts_path = path;
     bool result = fsUtil.setStringConfigValue(fsUtil.root_file_path, "speech", "local_tts_path", local_tts_path.c_str());
     Serial.println("SpeechUtil Path updated.");
     return result;
