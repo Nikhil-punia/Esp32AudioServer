@@ -21,6 +21,11 @@ FsUtil::FsUtil()
     ESP_LOGI(TAG, "Config file checked and initialized if necessary.");
 }
 
+FsUtil* FsUtil::getInstance() {
+    static FsUtil instance;
+    return &instance;
+}
+
 void FsUtil::checkAndInitialObjectInFile(const char *file_path)
 {
     char *buffer = getBufferFromFile(file_path);

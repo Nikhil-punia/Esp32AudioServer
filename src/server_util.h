@@ -1,14 +1,9 @@
 #pragma once
 
-#include "esp_http_server.h"
-#include "esp_log.h"
-#include "audio_util.h"
+
 #include <ESPmDNS.h>
-#include "cJSON.h"
 #include <string>
 #include <vector>
-#include "speech_util.h"
-#include "file_server.h"
 #include <esp_psram.h>
 #include "esp_wifi.h"
 #include <esp_clk_tree.h>
@@ -16,10 +11,22 @@
 #include <esp_chip_info.h>
 #include "esp_private/esp_clk.h"
 #include "driver/temperature_sensor.h"
+#include "freertos/semphr.h"
+#include "esp_http_server.h"
+#include <cJSON.h>
+#include "structGlobal.h"
+#include "file_server.h"
+#include "audio_util.h"
+#include "speech_util.h"
 
 class ServerUtil
 {
 private:
+                
+    ServerUtil();
+    ServerUtil(const ServerUtil&) = delete;      // Prevent copy
+    ServerUtil& operator=(const ServerUtil&) = delete;
+
     httpd_uri_t root_uri;
     httpd_uri_t speech_uri;
     httpd_uri_t lspeech_uri;
@@ -45,27 +52,8 @@ private:
     static void handleQueryForWebSettings(httpd_req_t *req, ServerUtil *self);
 
 public:
-    ServerUtil(SpeechUtil *speechUtilPtr, AudioUtil *audioUtilPtr);
 
-    SpeechUtil *speechUtil;
-    AudioUtil *audioUtil;
-   
-
-    struct SynthesizeArgs
-    {
-        SpeechUtil *speechUtil;
-        AudioUtil *audioUtil;
-        std::string *text;
-        std::string *lang;
-    };
-
-    struct lSynthesizeArgs
-    {
-        SpeechUtil *speechUtil;
-        AudioUtil *audioUtil;
-        std::unique_ptr<std::string> text;
-        std::unique_ptr<std::string> voice_id;
-    };
+    static ServerUtil* getInstance(); // Singleton accessor
 
     lSynthesizeArgs *largs = nullptr;
     SynthesizeArgs *args = nullptr;
@@ -77,7 +65,5 @@ public:
 
     static bool stopAllPreviousTasks(ServerUtil *self);
 
-    httpd_handle_t start_webserver(void);
+    httpd_handle_t start_webserver();
 };
-
-extern ServerUtil serverUtil;
