@@ -7,7 +7,9 @@ FsUtil::FsUtil()
     esp_vfs_fat_mount_config_t mount_config = {
         .format_if_mount_failed = true,
         .max_files = 10,
-        .allocation_unit_size = CONFIG_WL_SECTOR_SIZE};
+        .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
+        .use_one_fat = false};
+        
     wl_handle_t s_wl_handle;
     esp_err_t ret = esp_vfs_fat_spiflash_mount_rw_wl("/spiflash", "ffat", &mount_config, &s_wl_handle);
     if (ret != ESP_OK)
@@ -21,7 +23,8 @@ FsUtil::FsUtil()
     ESP_LOGI(TAG, "Config file checked and initialized if necessary.");
 }
 
-FsUtil* FsUtil::getInstance() {
+FsUtil *FsUtil::getInstance()
+{
     static FsUtil instance;
     return &instance;
 }
@@ -104,7 +107,7 @@ bool FsUtil::writeToFile(const char *file_path, const char *data)
 {
     uint64_t total = 0, free = 0;
     esp_vfs_fat_info("/spiflash", &total, &free);
-    Serial.printf("%s FS total: %llu, used: %llu, free: %llu\n", TAG, total, total-free, free);
+    Serial.printf("%s FS total: %llu, used: %llu, free: %llu\n", TAG, total, total - free, free);
 
     FILE *f = fopen(file_path, "w");
     if (!f)
