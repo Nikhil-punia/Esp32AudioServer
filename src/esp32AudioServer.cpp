@@ -1,15 +1,12 @@
 #include "esp32AudioServer.h"
 
-
 Esp32AudioServer::Esp32AudioServer()
-{
-    wifi = WifiUtil::getInstance();
-}
+    : ctx(Context::getInstance()), wifi(WifiUtil::getInstance())
+{}
 
 void Esp32AudioServer::setupServer()
 {
     fsUtil.checkAndInitialObjectInFile(fsUtil.root_file_path); // Ensure config structure
-
     wifi->connectToBestWifiOrSoftAP(wifi->ap_ssid, wifi->ap_password);
 
     ServerUtil::getInstance()->start_webserver();

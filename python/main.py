@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, jsonify, after_this_request
+from flask import Flask, request, jsonify, Response
 import pyttsx3
 import uuid
 import os
@@ -20,8 +20,8 @@ def list_voices():
 
 
 @app.route('/tts', methods=['POST'])
-def tts():
-    """Offline TTS using pyttsx3."""
+def tts_stream():
+    """Stream offline TTS using pyttsx3."""
     data = request.get_json(force=True)
     text = data.get('text')
     voice_id = data.get('voice')
@@ -43,20 +43,18 @@ def tts():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    @after_this_request
-    def remove_file(response):
-        try:
-            os.remove(filename)
-        except Exception as e:
-            app.logger.warning(f"Failed to delete file {filename}: {e}")
-        return response
+    def generate():
+        with open(filename, "rb") as f:
+            while chunk := f.read(4096):
+                yield chunk
+        os.remove(filename)
 
-    return send_file(filename, mimetype='audio/wav')
+    return Response(generate(), mimetype='audio/wav')
 
 
 @app.route('/gtts', methods=['POST'])
-def gtts_endpoint():
-    """Online TTS using Google gTTS."""
+def gtts_stream():
+    """Stream Google gTTS result."""
     data = request.get_json(force=True)
     text = data.get('text')
     lang = data.get('lang', 'en')
@@ -72,20 +70,18 @@ def gtts_endpoint():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    @after_this_request
-    def remove_file(response):
-        try:
-            os.remove(filename)
-        except Exception as e:
-            app.logger.warning(f"Failed to delete file {filename}: {e}")
-        return response
+    def generate():
+        with open(filename, "rb") as f:
+            while chunk := f.read(4096):
+                yield chunk
+        os.remove(filename)
 
-    return send_file(filename, mimetype='audio/mpeg')
+    return Response(generate(), mimetype='audio/mpeg')
 
 
 @app.route('/edge_tts', methods=['POST'])
-def edge_tts_route():
-    """High-quality TTS using Microsoft Edge Neural voices (safe pitch/rate support)."""
+def edge_tts_stream():
+    """Stream TTS using Microsoft Edge Neural voices."""
     data = request.get_json(force=True)
     text = data.get('text')
     voice = data.get('voice', 'en-US-AriaNeural')
@@ -98,11 +94,7 @@ def edge_tts_route():
     filename = f"/tmp/{uuid.uuid4().hex}.mp3"
 
     async def generate_tts():
-        options = {
-            "text": text,
-            "voice": voice
-        }
-
+        options = {"text": text, "voice": voice}
         if rate and rate not in ["0%", "+0%", "-0%", "0", ""]:
             options["rate"] = rate
         if pitch and pitch not in ["0%", "+0%", "-0%", "0", ""]:
@@ -123,8 +115,18 @@ def edge_tts_route():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    return send_file(filename, mimetype='audio/mpeg')
+    def generate():
+        with open(filename, "rb") as f:
+            while chunk := f.read(4096):
+                yield chunk
+        os.remove(filename)
+
+    return Response(generate(), mimetype='audio/mpeg')
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, threaded=True)
+# This code provides a Flask application that serves as a TTS server.
+# It supports both offline TTS using pyttsx3 and online TTS using Google gTTS and Microsoft Edge TTS.
+# The server can handle requests to list available voices, stream TTS audio, and supports various parameters like voice ID, rate, and pitch.
+# The audio is streamed in chunks to the client, and temporary files are cleaned up after use

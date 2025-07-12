@@ -1,14 +1,15 @@
 #include "audio_util.h"
 
-
-AudioUtil* AudioUtil::getInstance() {
+AudioUtil *AudioUtil::getInstance()
+{
     static AudioUtil instance;
     return &instance;
 }
 
 // Constructor implementation
 AudioUtil::AudioUtil()
-    : audio(),
+    : ctx(Context::getInstance()),
+      audio(),
       audio_playing(false),
       audio_stopping(false)
 {
@@ -75,7 +76,7 @@ void AudioUtil::handle_google_tts(const char *text, const char *lang)
     }
 }
 
-void AudioUtil::handle_local_tts(std::string text, std::string voice_id,std::string host,int port,std::string path)
+void AudioUtil::handle_local_tts(std::string text, std::string voice_id, std::string host, int port, std::string path)
 {
     // Access local_tts_host from speech_util.h
 

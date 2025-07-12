@@ -6,9 +6,9 @@ WifiUtil* WifiUtil::getInstance() {
     return &instance;
 }
 
-WifiUtil::WifiUtil(){
+WifiUtil::WifiUtil():ctx(Context::getInstance()){
     lastScan = 0;
-    wifiRetryTimeout = 15000;
+    wifiRetryTimeout = ctx->wifiAPScanRetryTimeout;
     WiFi.onEvent(WiFiEvent);
     wifiState = WIFI_CONNECTING;
 }
@@ -143,8 +143,8 @@ void WifiUtil::wifiManagerLoop()
     {
         // Optionally, periodically scan and try to reconnect to WiFi
 
-        if (millis() - lastScan > 30000)
-        { // Try every 30 seconds
+        if (millis() - lastScan > ctx->wifiRetryScanTime)
+        { 
             lastScan = millis();
             Serial.println("\nChecking If Wifi Is Available");
             connectToBestWifiOrSoftAP("Audio_Module", "Audio_Module");

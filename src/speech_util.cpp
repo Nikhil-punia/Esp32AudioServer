@@ -7,9 +7,13 @@ SpeechUtil* SpeechUtil::getInstance() {
 }
 
 
+SpeechUtil::SpeechUtil() : ctx(Context::getInstance()) {
+    // Initialize any required state here
+}
+
 void SpeechUtil::speech_synthesis_task(void *param)
 {
-    
+    Context *ctx_local  = Context::getInstance();
 
     SynthesizeArgs *args = static_cast<SynthesizeArgs *>(param); // Use static_cast for C++ style casting
 
@@ -28,7 +32,7 @@ void SpeechUtil::speech_synthesis_task(void *param)
     const std::string *lang = args->lang;
     int len = text->length();
     int start = 0;
-    const int CHUNK_SIZE = 150;
+    int &CHUNK_SIZE = ctx_local->google_speech_chunk_size;
     std::vector<int> initial_chunks;
 
     int div = len / CHUNK_SIZE;
@@ -62,6 +66,8 @@ void SpeechUtil::speech_synthesis_task(void *param)
 
 void SpeechUtil::lspeech_synthesis_task(void *param)
 {
+    Context *ctx_local = Context::getInstance();
+
     lSynthesizeArgs *args = static_cast<lSynthesizeArgs *>(param); // Use static_cast for C++ style casting
     if (!args || !args->text || !args->voice_id)
     {
@@ -76,7 +82,9 @@ void SpeechUtil::lspeech_synthesis_task(void *param)
     const std::string *voice_id = args->voice_id.get();
     int len = text->length();
     int start = 0;
-    const int CHUNK_SIZE = 250;
+
+    
+    int &CHUNK_SIZE = ctx_local->local_speech_chunk_size; // Use reference to access global config
     std::vector<int> initial_chunks;
 
     int div = len / CHUNK_SIZE;
@@ -271,4 +279,32 @@ bool SpeechUtil::handleSingleConfigUpdate(const std::string &query, const std::s
         Serial.printf("Unknown query: %s\n", query.c_str());
         return false;
     }
+}
+
+bool SpeechUtil::stopAllPreviousTasks()
+{
+    if (SpeechUtil::getInstance()->speech_task_running())
+    {
+        SpeechUtil::getInstance()->stop_speech_task();
+        if (ctx->args != nullptr)
+        {
+            delete ctx->args->text;
+            free(ctx->args);
+            ctx->args = nullptr;
+        }
+    }
+
+    if (SpeechUtil::getInstance()->speech_ltask_running())
+    {
+        SpeechUtil::getInstance()->stop_lspeech_task();
+        if (ctx->largs != nullptr)
+        {
+            delete ctx->largs;
+            ctx->largs = nullptr;
+        }
+    }
+
+    AudioUtil::getInstance()->stopAudio();
+
+    return true;
 }
