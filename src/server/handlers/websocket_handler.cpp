@@ -67,10 +67,27 @@ esp_err_t websocket_handler(httpd_req_t *req)
             handleQueryForConfig(req, name->valuestring, true);
         }
     }
-    else
+
+    const cJSON *action = cJSON_GetObjectItem(root, "action");
+    if (action && cJSON_IsString(action))
     {
-        ESP_LOGE(ctx->TAG_HTTP_SERVER, "Missing or invalid 'get' field in JSON");
+        if (strcmp(action->valuestring, "get_config") == 0)
+        {
+            
+        }
+        else if (strcmp(action->valuestring, "set_config") == 0)
+        {
+           
+        }
+        else
+        {
+            ESP_LOGE(ctx->TAG_HTTP_SERVER, "Unknown action: %s", action->valuestring);
+            cJSON_Delete(root);
+            free(ws_pkt.payload);
+            return ESP_FAIL;
+        }
     }
+    
 
     cJSON_Delete(root);
     free(ws_pkt.payload);

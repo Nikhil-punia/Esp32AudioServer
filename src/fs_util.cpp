@@ -8,6 +8,7 @@ FsUtil::FsUtil()
         .format_if_mount_failed = true,
         .max_files = 10,
         .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
+        .disk_status_check_enable = false,
         .use_one_fat = false};
         
     wl_handle_t s_wl_handle;

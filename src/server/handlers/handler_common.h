@@ -11,6 +11,9 @@ void sendJsonResponse(httpd_req_t *req, cJSON *json_response);
 void sendJsonWebResponse(httpd_req_t *req, cJSON *json_response);
 void sendStringWebResponse(httpd_req_t *req, char *json_string);
 
+void get_speech_config(httpd_req_t *req,bool isWebSoc);
+void set_speech_config(httpd_req_t *req,bool isWebSoc);
+
 void handleQueryForConfig(httpd_req_t *req, const char *query, bool webs);
 
 #ifdef __cplusplus

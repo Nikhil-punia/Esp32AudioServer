@@ -104,6 +104,47 @@ void sendStringWebResponse(httpd_req_t *req, char *json_string)
         ESP_LOGE(ctx->TAG_HTTP_SERVER, "Failed to send websocket response");
 }
 
+void get_speech_config(httpd_req_t *req, bool isWebSoc)
+{
+ // get the speech configuration
+    cJSON *json_response = cJSON_CreateObject();
+    if (!json_response)
+    {
+        ESP_LOGE(Context::getInstance()->TAG_HTTP_SERVER, "Failed to create JSON object");
+        httpd_resp_send_500(req);
+        return;
+    }
+    cJSON_AddStringToObject(json_response, "msg","200");
+    // add another object named data within json response object
+    cJSON *data = cJSON_CreateObject();
+    if (!data)
+    {
+        ESP_LOGE(Context::getInstance()->TAG_HTTP_SERVER, "Failed to create JSON object");
+        httpd_resp_send_500(req);
+        cJSON_Delete(json_response);
+        return;
+    }
+    cJSON_AddItemToObject(json_response, "data", data);
+    
+    
+    
+
+    // send to webSocket or HTTP response
+    if (isWebSoc)
+    {
+        sendJsonWebResponse(req, json_response);
+    }
+    else
+    {
+        sendJsonResponse(req, json_response);
+    }
+}
+
+void set_speech_config(httpd_req_t *req, bool isWebSoc)
+{
+
+}
+
 // ------------- MODULAR DATA HANDLERS -------------
 
 static void addSystemInfo(cJSON *json_response)
