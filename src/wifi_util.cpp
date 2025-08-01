@@ -1,19 +1,20 @@
 #include "wifi_util.h"
 
- 
-WifiUtil* WifiUtil::getInstance() {
+WifiUtil *WifiUtil::getInstance()
+{
     static WifiUtil instance;
     return &instance;
 }
 
-WifiUtil::WifiUtil():ctx(Context::getInstance()){
+WifiUtil::WifiUtil() : ctx(Context::getInstance())
+{
     lastScan = 0;
     wifiRetryTimeout = ctx->wifiAPScanRetryTimeout;
     WiFi.onEvent(WiFiEvent);
     wifiState = WIFI_CONNECTING;
 }
 
-void  WifiUtil::storeWifiCred(const char *ssid, const char *password)
+void WifiUtil::storeWifiCred(const char *ssid, const char *password)
 {
     std::pair<cJSON *, cJSON *> root = fsUtil.getObjectFromRoot(fsUtil.root_file_path, "wifi");
     cJSON *wifiArr = cJSON_GetObjectItem(root.second, "hosts");
@@ -62,8 +63,17 @@ void WifiUtil::connectToBestWifiOrSoftAP(const char *ap_ssid, const char *ap_pas
 
     int n = WiFi.scanNetworks();
     int bestRssi = -1000;
-    bestSsid = "";
-    bestPass = "";
+
+    if (wifiArr && cJSON_IsArray(wifiArr))
+    {
+        bestSsid = "";
+        bestPass = "";
+    }
+    else
+    {
+        bestSsid = ctx->ssid;
+        bestPass = ctx->password;
+    }
 
     if (wifiArr && cJSON_IsArray(wifiArr))
     {
@@ -144,7 +154,7 @@ void WifiUtil::wifiManagerLoop()
         // Optionally, periodically scan and try to reconnect to WiFi
 
         if (millis() - lastScan > ctx->wifiRetryScanTime)
-        { 
+        {
             lastScan = millis();
             Serial.println("\nChecking If Wifi Is Available");
             connectToBestWifiOrSoftAP("Audio_Module", "Audio_Module");
@@ -152,18 +162,22 @@ void WifiUtil::wifiManagerLoop()
     }
 }
 
-void WifiUtil::WiFiEvent(WiFiEvent_t event) {
-    WifiUtil* self = WifiUtil::getInstance();
+void WifiUtil::WiFiEvent(WiFiEvent_t event)
+{
+    WifiUtil *self = WifiUtil::getInstance();
 
-    if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
-        if (self->disconnectReset) {
+    if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED)
+    {
+        if (self->disconnectReset)
+        {
             Serial.println("WiFi disconnected! Attempting to reconnect...");
             self->wifiState = WIFI_CONNECTING;
             self->wifiConnectStart = millis();
             self->disconnectReset = false;
         }
     }
-    else if (event == ARDUINO_EVENT_WIFI_STA_CONNECTED) {
+    else if (event == ARDUINO_EVENT_WIFI_STA_CONNECTED)
+    {
         self->disconnectReset = true;
     }
 }
